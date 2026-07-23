@@ -1450,7 +1450,7 @@ Dark Magician Girl;Spellcaster;DARK;2000;1700;6;Female"></textarea>
   };
 
   // Versão do programa — atualizar este número a cada mudança publicada.
-  var APP_VERSION = '1.49';
+  var APP_VERSION = '2.50';
 
   var BASE_CARDS = JSON.parse(document.getElementById('cards-data').textContent);
   var DEFAULT_META = JSON.parse(document.getElementById('default-meta-data').textContent);
@@ -4020,6 +4020,7 @@ Dark Magician Girl;Spellcaster;DARK;2000;1700;6;Female"></textarea>
       '<li><b>Save Changes</b> — confirms everything and writes it (protected by Login Master).</li>' +
       '<li><b>Export/Import backup</b> — downloads or restores a .json file with everything.</li>' +
       '<li><b>Choose folder to save</b> (Chrome/Edge) — every Save creates a new dated file, automatically keeping only the 10 most recent (older ones get deleted). "Load from folder" always picks the most recent one. The tool remembers the chosen folder and tries to reconnect automatically next time — if the browser needs a fresh click to re-grant permission, a "Reconnect folder" button appears, and the latest backup loads automatically right after.</li>' +
+      '<li><b>Program updates</b> — the tool lives at a single published address, so every device gets the new version automatically the next time it loads or reloads the page. Your saved data (chosen folder or browser storage) is kept separately from the code, so updating never erases it. If a tab was already open, it keeps running the old version until you reload it — and if the browser insists on showing the old version right after an update, force a full reload (Ctrl+F5 on Windows/Linux, Cmd+Shift+R on Mac).</li>' +
       '</ul>' +
 
       '<h2>8. Login Master</h2>' +
@@ -4110,6 +4111,7 @@ Dark Magician Girl;Spellcaster;DARK;2000;1700;6;Female"></textarea>
     '<li><b>Salvar Alterações</b> — confirma tudo e grava (protegido por Login Master).</li>' +
     '<li><b>Exportar/Importar backup</b> — baixa ou restaura um arquivo .json com tudo.</li>' +
     '<li><b>Escolher pasta para salvar</b> (Chrome/Edge) — cada Salvar cria um arquivo novo com data/hora, mantendo automaticamente só os 10 mais recentes (os mais antigos são apagados sozinhos). "Carregar da pasta" sempre pega o mais recente. O programa lembra da pasta escolhida e tenta reconectar sozinho da próxima vez — se o navegador exigir um clique pra reconfirmar a permissão, aparece um botão "Reconectar pasta", e o backup mais recente já carrega automaticamente logo em seguida.</li>' +
+    '<li><b>Atualizações do programa</b> — a ferramenta vive num único endereço publicado, então todo dispositivo recebe a versão nova automaticamente na próxima vez que carregar ou recarregar a página. Seus dados salvos (pasta escolhida ou armazenamento do navegador) ficam separados do código, então atualizar nunca apaga nada. Se uma aba já estava aberta, ela continua rodando a versão antiga até você recarregar — e se o navegador insistir em mostrar a versão antiga logo depois de uma atualização, force um recarregamento completo (Ctrl+F5 no Windows/Linux, Cmd+Shift+R no Mac).</li>' +
     '</ul>' +
 
     '<h2>8. Login Master</h2>' +
