@@ -474,6 +474,15 @@
     font-family:'Cinzel', serif; font-size:18px; margin:0; color:var(--gold-bright);
   }
   .dialog-hint{ margin:0; font-size:12.5px; color:var(--parchment-dim); line-height:1.5; }
+  .folder-nudge{
+    display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    background:linear-gradient(180deg, rgba(217,100,43,0.14), rgba(217,100,43,0.05));
+    border:1px solid rgba(217,100,43,0.4);
+    border-radius:2px; padding:10px 14px; margin:-6px 0 14px;
+    font-size:13px; color:var(--parchment);
+  }
+  .folder-nudge .btn{ padding:6px 12px; font-size:12px; }
+  .folder-nudge-text{ flex:1 1 260px; }
   .dialog-section-title{
     display:block; font-family:'JetBrains Mono', monospace; font-size:10px; font-weight:700;
     letter-spacing:0.08em; text-transform:uppercase; color:var(--gold); margin-bottom:8px;
@@ -643,6 +652,12 @@
 
   <div class="prob-summary" style="margin-bottom:14px;">
     <span id="hintBulkImages">📷 Nomeie os arquivos com o número da carta (001.jpg … 722.jpg) e selecione todos de uma vez.</span> <button type="button" id="btnOpenTutorial3" class="ms-link">Detalhes no tutorial</button>
+  </div>
+
+  <div class="folder-nudge" id="folderNudge" style="display:none;">
+    <span class="folder-nudge-text" id="folderNudgeText"></span>
+    <button type="button" class="btn primary" id="btnFolderNudgeAction" style="display:none;">Escolher pasta</button>
+    <button type="button" class="btn ghost" id="btnFolderNudgeDismiss">Agora não</button>
   </div>
 
   <div class="toolbar" style="margin-top:-8px;">
@@ -1128,6 +1143,27 @@ Dark Magician Girl;Spellcaster;DARK;2000;1700;6;Female"></textarea>
 (function(){
   "use strict";
 
+  // Fora do sandbox original esta API não existe — sem isso, todo "salvar" abaixo
+  // falhava em silêncio (try/catch engolia o erro) e nada persistia entre acessos.
+  if(!window.storage){
+    var LS_PREFIX = 'forjar-deck-storage:';
+    window.storage = {
+      get: function(key){
+        return Promise.resolve().then(function(){
+          try{
+            var raw = window.localStorage.getItem(LS_PREFIX + key);
+            return raw === null ? null : { value: raw };
+          }catch(e){ return null; }
+        });
+      },
+      set: function(key, value){
+        return Promise.resolve().then(function(){
+          window.localStorage.setItem(LS_PREFIX + key, value);
+        });
+      }
+    };
+  }
+
   var VALUE_CAP = 2048;
 
   var TYPES = [
@@ -1233,6 +1269,8 @@ Dark Magician Girl;Spellcaster;DARK;2000;1700;6;Female"></textarea>
     btnChooseFolder: { pt: 'Escolher pasta para salvar…', en: 'Choose folder to save…' },
     btnReconnectFolder: { pt: 'Reconectar pasta…', en: 'Reconnect folder…' },
     btnLoadFromFolder: { pt: 'Carregar da pasta', en: 'Load from folder' },
+    btnFolderNudgeAction: { pt: 'Escolher pasta', en: 'Choose folder' },
+    btnFolderNudgeDismiss: { pt: 'Agora não', en: 'Not now' },
     lblGenPanelTitle: { pt: 'Gerar arquivos do personagem', en: 'Generate character files' },
     lblCharName: { pt: 'Nome do personagem', en: 'Character name' },
     lblWhatToSave: { pt: 'O que salvar', en: 'What to save' },
@@ -1412,7 +1450,7 @@ Dark Magician Girl;Spellcaster;DARK;2000;1700;6;Female"></textarea>
   };
 
   // Versão do programa — atualizar este número a cada mudança publicada.
-  var APP_VERSION = '1.48';
+  var APP_VERSION = '1.49';
 
   var BASE_CARDS = JSON.parse(document.getElementById('cards-data').textContent);
   var DEFAULT_META = JSON.parse(document.getElementById('default-meta-data').textContent);
@@ -3375,6 +3413,7 @@ Dark Magician Girl;Spellcaster;DARK;2000;1700;6;Female"></textarea>
         ? 'Your browser does not support choosing a folder directly — use Export/Import backup.'
         : 'Seu navegador não permite escolher pasta diretamente — use Exportar/Importar backup.';
       btnLoadFromFolder.disabled = true;
+      updateFolderNudge();
       return;
     }
     if(saveDirHandle){
@@ -3387,7 +3426,49 @@ Dark Magician Girl;Spellcaster;DARK;2000;1700;6;Female"></textarea>
       folderStatus.textContent = LANG === 'en' ? 'No folder chosen yet.' : 'Nenhuma pasta escolhida ainda.';
       btnLoadFromFolder.disabled = true;
     }
+    updateFolderNudge();
   }
+
+  // Convida cada dispositivo/navegador a conectar sua própria pasta local — cada um
+  // tem seu próprio File System Access handle, então isso precisa ser pedido de novo em cada um.
+  var folderNudge = document.getElementById('folderNudge');
+  var folderNudgeText = document.getElementById('folderNudgeText');
+  var btnFolderNudgeAction = document.getElementById('btnFolderNudgeAction');
+  var btnFolderNudgeDismiss = document.getElementById('btnFolderNudgeDismiss');
+  var folderNudgeDismissed = false;
+
+  function updateFolderNudge(){
+    if(folderNudgeDismissed || !folderNudge){ if(folderNudge) folderNudge.style.display = 'none'; return; }
+    if(!folderSupported){
+      folderNudge.style.display = 'flex';
+      btnFolderNudgeAction.style.display = 'none';
+      folderNudgeText.textContent = LANG === 'en'
+        ? "This browser can't connect a local save folder — export a backup regularly so you don't lose changes on this device."
+        : 'Este navegador não permite conectar uma pasta local — exporte um backup regularmente pra não perder as alterações deste dispositivo.';
+      return;
+    }
+    if(saveDirHandle){ folderNudge.style.display = 'none'; return; }
+    folderNudge.style.display = 'flex';
+    if(btnReconnectFolder.style.display !== 'none'){
+      btnFolderNudgeAction.style.display = 'none';
+      folderNudgeText.textContent = LANG === 'en'
+        ? 'Reconnect your save folder on this device (button below) so changes keep saving locally here.'
+        : 'Reconecte a pasta de salvamento neste dispositivo (botão abaixo) pra continuar salvando localmente aqui.';
+    } else {
+      btnFolderNudgeAction.style.display = 'inline-block';
+      folderNudgeText.textContent = LANG === 'en'
+        ? "This device hasn't got a save folder yet — choose one on your computer so your changes are saved here."
+        : 'Este dispositivo ainda não tem uma pasta de salvamento — escolha uma no seu computador pra suas alterações ficarem salvas aqui.';
+    }
+  }
+
+  if(btnFolderNudgeAction) btnFolderNudgeAction.addEventListener('click', function(){
+    document.getElementById('btnChooseFolder').click();
+  });
+  if(btnFolderNudgeDismiss) btnFolderNudgeDismiss.addEventListener('click', function(){
+    folderNudgeDismissed = true;
+    folderNudge.style.display = 'none';
+  });
 
   document.getElementById('btnChooseFolder').addEventListener('click', withAuth(async function(){
     if(!folderSupported){
@@ -3437,9 +3518,9 @@ Dark Magician Girl;Spellcaster;DARK;2000;1700;6;Female"></textarea>
   }
 
   async function tryAutoReconnectFolder(){
-    if(!folderSupported) return;
+    if(!folderSupported){ updateFolderNudge(); return; }
     var stored = await idbGetHandle();
-    if(!stored) return;
+    if(!stored){ updateFolderNudge(); return; }
     try{
       var perm = await stored.queryPermission({mode:'readwrite'});
       if(perm === 'granted'){
@@ -3452,8 +3533,9 @@ Dark Magician Girl;Spellcaster;DARK;2000;1700;6;Female"></textarea>
         folderStatus.textContent = LANG === 'en'
           ? 'Previous folder found: "' + stored.name + '" — click "Reconnect folder" to keep using it.'
           : 'Pasta anterior encontrada: "' + stored.name + '" — clique em "Reconectar pasta" pra continuar usando.';
+        updateFolderNudge();
       }
-    }catch(err){ /* handle inválido/removido — ignora */ }
+    }catch(err){ updateFolderNudge(); /* handle inválido/removido — ignora */ }
   }
 
   var MAX_BACKUPS_TO_KEEP = 10;
