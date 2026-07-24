@@ -489,18 +489,15 @@
   body.site-locked .site-gate{
     display:flex; position:fixed; inset:0; z-index:9999;
     align-items:center; justify-content:center; padding:24px;
-    background:
-      radial-gradient(1200px 700px at 50% -10%, rgba(91,74,134,0.35), transparent 60%),
-      radial-gradient(900px 600px at 100% 110%, rgba(217,100,43,0.20), transparent 55%),
-      var(--void);
+    background-size:cover; background-position:center; background-repeat:no-repeat;
   }
   .site-gate-card{
-    background:linear-gradient(180deg, var(--panel), var(--void-2));
+    background:rgba(20,17,12,0.74);
+    backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);
     border:1px solid var(--line); border-radius:3px;
     padding:28px; max-width:360px; width:100%;
-    text-align:center; box-shadow:0 30px 80px rgba(0,0,0,0.55);
+    text-align:center; box-shadow:0 30px 80px rgba(0,0,0,0.6);
   }
-  .site-gate-img{ width:180px; height:auto; border-radius:3px; margin-bottom:16px; box-shadow:0 0 40px rgba(233,200,119,0.28); }
   .site-gate-title{ font-family:'Cinzel', serif; color:var(--gold-bright); font-size:22px; margin:0 0 6px; }
   .site-gate-sub{ font-size:12.5px; color:var(--parchment-dim); margin:0 0 18px; line-height:1.5; }
   .site-gate .field-row{ text-align:left; margin-bottom:12px; }
@@ -632,7 +629,6 @@
 
 <div class="site-gate" id="siteGate">
   <div class="site-gate-card">
-    <img class="site-gate-img" id="siteGateImg" src="" alt="">
     <h1 class="site-gate-title" id="pageTitleGate">Forjar Deck</h1>
     <p class="site-gate-sub" id="siteGateSub">Acesso restrito — digite login e senha para entrar.</p>
     <div class="field-row">
@@ -1499,7 +1495,7 @@ Dark Magician Girl;Spellcaster;DARK;2000;1700;6;Female"></textarea>
   };
 
   // Versão do programa — atualizar este número a cada mudança publicada.
-  var APP_VERSION = '2.51';
+  var APP_VERSION = '2.52';
 
   var BASE_CARDS = JSON.parse(document.getElementById('cards-data').textContent);
   var DEFAULT_META = JSON.parse(document.getElementById('default-meta-data').textContent);
@@ -1610,8 +1606,11 @@ Dark Magician Girl;Spellcaster;DARK;2000;1700;6;Female"></textarea>
   }
 
   // ---------------- Site access gate (shown on every fresh load, blocks everything until logged in) ----------------
-  var siteGateImg = document.getElementById('siteGateImg');
-  if(siteGateImg) siteGateImg.src = SITE_BG_IMAGE;
+  var siteGateEl = document.getElementById('siteGate');
+  if(siteGateEl){
+    siteGateEl.style.backgroundImage =
+      'linear-gradient(rgba(10,8,6,0.32), rgba(10,8,6,0.82)), url("' + SITE_BG_IMAGE + '")';
+  }
   var siteGateLoginInput = document.getElementById('siteGateLoginInput');
   var siteGatePasswordInput = document.getElementById('siteGatePasswordInput');
   var siteGateError = document.getElementById('siteGateError');
