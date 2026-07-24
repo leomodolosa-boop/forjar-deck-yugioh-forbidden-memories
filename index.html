@@ -672,7 +672,6 @@
     <div class="toolbar" id="mainToolbar">
     <button class="btn primary" id="btnSaveChanges" disabled><span id="btnSaveChangesText">Salvar Alterações</span></button>
     <span class="dirty-indicator clean" id="dirtyIndicator"><span class="dirty-dot"></span><span id="dirtyText">Tudo salvo</span></span>
-    <button class="btn danger" id="btnToggleLock"><span id="btnToggleLockText">🔒 Login Master (ações da ferramenta)</span></button>
     <div class="spacer"></div>
     <button class="btn ghost" id="btnOpenAddCard">Cadastrar cartas…</button>
     <button class="btn ghost" id="btnExportBackup">Exportar backup</button>
@@ -1114,27 +1113,6 @@ Dark Magician Girl;Spellcaster;DARK;2000;1700;6;Female"></textarea>
   </form>
 </dialog>
 
-<!-- Login Master dialog (protects tool-level actions only) -->
-<dialog id="passwordDialog" class="app-dialog">
-  <form method="dialog" class="dialog-form">
-    <h2 id="dlgLoginTitle">Login Master</h2>
-    <p class="dialog-hint" id="hintPassword">Essa área protege só as ações da ferramenta (salvar, backup, pasta, template) — editar cartas continua livre.</p>
-    <div class="field">
-      <label id="lblLoginField">Login</label>
-      <input type="text" id="loginInput" placeholder="Admin" autocomplete="off">
-    </div>
-    <div class="field">
-      <label id="lblSenhaField">Senha</label>
-      <input type="password" id="passwordInput" placeholder="••••••••" autocomplete="off">
-    </div>
-    <p class="password-error" id="passwordError">Login ou senha incorretos. Tente novamente.</p>
-    <div class="dialog-actions">
-      <button type="button" class="btn ghost" id="btnPasswordCancel">Cancelar</button>
-      <button type="button" class="btn primary" id="btnPasswordSubmit">Entrar</button>
-    </div>
-  </form>
-</dialog>
-
 <!-- Image gallery dialog -->
 <dialog id="imageGalleryDialog" class="app-dialog" style="max-width:640px;">
   <form method="dialog" class="dialog-form">
@@ -1294,8 +1272,6 @@ Dark Magician Girl;Spellcaster;DARK;2000;1700;6;Female"></textarea>
       en: 'Only fill in the fields you want to change across every selected card. Leave blank / "don\'t change" to keep it as is.' },
     hintGenConfig: { pt: 'Deixe em "Automático" para usar a regra padrão de raridade. Só mexa em "Personalizado" se quiser restringir manualmente.',
       en: 'Leave it on "Automatic" to use the standard rarity rule. Only switch to "Custom" if you want to restrict it manually.' },
-    hintPassword: { pt: 'Essa área protege só as ações da ferramenta (salvar, backup, pasta, template) — editar cartas continua livre.',
-      en: 'This only protects tool-level actions (save, backup, folder, template) — editing cards stays free.' },
 
     btnSaveChangesText: { pt: 'Salvar Alterações', en: 'Save Changes' },
     btnSaveChanges2Text: { pt: 'Salvar Alterações', en: 'Save Changes' },
@@ -1425,12 +1401,6 @@ Dark Magician Girl;Spellcaster;DARK;2000;1700;6;Female"></textarea>
     optDeckMonte: { pt: 'Meu monte atual (usa as cartas e quantidades do monte de até 40 cartas)', en: 'My current deck (uses the cards and quantities from the up-to-40-card deck)' },
     btnCancelGenConfig: { pt: 'Cancelar', en: 'Cancel' },
     btnConfirmGenConfig: { pt: 'Gerar', en: 'Generate' },
-    dlgLoginTitle: { pt: 'Login Master', en: 'Master Login' },
-    lblLoginField: { pt: 'Login', en: 'Login' },
-    lblSenhaField: { pt: 'Senha', en: 'Password' },
-    passwordError: { pt: 'Login ou senha incorretos. Tente novamente.', en: 'Incorrect login or password. Try again.' },
-    btnPasswordCancel: { pt: 'Cancelar', en: 'Cancel' },
-    btnPasswordSubmit: { pt: 'Entrar', en: 'Log in' },
     siteGateSub: { pt: 'Acesso restrito — digite login e senha para entrar.', en: 'Restricted access — enter login and password to continue.' },
     siteGateLoginLbl: { pt: 'Login', en: 'Login' },
     siteGateSenhaLbl: { pt: 'Senha', en: 'Password' },
@@ -1464,7 +1434,6 @@ Dark Magician Girl;Spellcaster;DARK;2000;1700;6;Female"></textarea>
     if(btnEn) btnEn.classList.toggle('active', lang === 'en');
     try{ window.storage.set('ui-lang', lang, false); }catch(e){}
     updateFolderStatus();
-    if(typeof updateLockUI === 'function') updateLockUI();
     if(typeof refreshTypeAttrLabelsEverywhere === 'function') refreshTypeAttrLabelsEverywhere();
     if(typeof dirty !== 'undefined'){ if(dirty) markDirty(); else markClean(); }
     if(typeof renderDeck === 'function') renderDeck();
@@ -1495,7 +1464,7 @@ Dark Magician Girl;Spellcaster;DARK;2000;1700;6;Female"></textarea>
   };
 
   // Versão do programa — atualizar este número a cada mudança publicada.
-  var APP_VERSION = '2.52';
+  var APP_VERSION = '2.53';
 
   var BASE_CARDS = JSON.parse(document.getElementById('cards-data').textContent);
   var DEFAULT_META = JSON.parse(document.getElementById('default-meta-data').textContent);
@@ -1583,27 +1552,13 @@ Dark Magician Girl;Spellcaster;DARK;2000;1700;6;Female"></textarea>
     toast._t = setTimeout(function(){ el.classList.remove('show'); }, 3200);
   }
 
-  // ---------------- Edit protection (Login Master — tool-level actions only) ----------------
+  // ---------------- Edit protection ----------------
+  // The site gate below is now the single login. Tool-level actions used to need
+  // a second password prompt (withAuth) — kept as a no-op pass-through so every
+  // existing call site (Save, Backup, Folder, template...) still works unchanged.
   var MASTER_LOGIN = 'Admin';
   var MASTER_PASSWORD = 'Admin';
-  var isUnlocked = false;
-  var pendingAuthAction = null;
-  var passwordDialog = document.getElementById('passwordDialog');
-  var loginInput = document.getElementById('loginInput');
-  var passwordInput = document.getElementById('passwordInput');
-  var passwordError = document.getElementById('passwordError');
-
-  function updateLockUI(){
-    var lockBtn = document.getElementById('btnToggleLock');
-    var lockText = document.getElementById('btnToggleLockText');
-    if(isUnlocked){
-      if(lockText) lockText.textContent = LANG === 'en' ? '🔓 Login Master active — click to exit' : '🔓 Login Master ativo — clique para sair';
-      lockBtn.classList.remove('danger');
-    } else {
-      if(lockText) lockText.textContent = LANG === 'en' ? '🔒 Login Master (tool-level actions)' : '🔒 Login Master (ações da ferramenta)';
-      lockBtn.classList.add('danger');
-    }
-  }
+  function withAuth(fn){ return fn; }
 
   // ---------------- Site access gate (shown on every fresh load, blocks everything until logged in) ----------------
   var siteGateEl = document.getElementById('siteGate');
@@ -1618,8 +1573,6 @@ Dark Magician Girl;Spellcaster;DARK;2000;1700;6;Female"></textarea>
   function trySiteGateSubmit(){
     if(siteGateLoginInput.value === MASTER_LOGIN && siteGatePasswordInput.value === MASTER_PASSWORD){
       document.body.classList.remove('site-locked');
-      isUnlocked = true;
-      updateLockUI();
       if(siteGateError) siteGateError.style.display = 'none';
     } else {
       if(siteGateError) siteGateError.style.display = 'block';
@@ -1632,56 +1585,6 @@ Dark Magician Girl;Spellcaster;DARK;2000;1700;6;Female"></textarea>
   if(siteGatePasswordInput) siteGatePasswordInput.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); trySiteGateSubmit(); } });
   if(siteGateLoginInput) siteGateLoginInput.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); siteGatePasswordInput.focus(); } });
   setTimeout(function(){ if(siteGateLoginInput) siteGateLoginInput.focus(); }, 50);
-
-  function promptAuth(fn){
-    pendingAuthAction = fn;
-    loginInput.value = '';
-    passwordInput.value = '';
-    passwordError.style.display = 'none';
-    passwordDialog.showModal();
-    setTimeout(function(){ loginInput.focus(); }, 50);
-  }
-
-  function withAuth(fn){
-    return function(evt){
-      if(isUnlocked){ fn(evt); return; }
-      if(evt && evt.preventDefault) evt.preventDefault();
-      if(evt && evt.stopPropagation) evt.stopPropagation();
-      promptAuth(function(){ fn(evt); });
-    };
-  }
-
-  function trySubmitPassword(){
-    if(loginInput.value === MASTER_LOGIN && passwordInput.value === MASTER_PASSWORD){
-      isUnlocked = true;
-      passwordDialog.close();
-      updateLockUI();
-      toast('Login Master ativo para esta sessão');
-      if(pendingAuthAction){ var fn = pendingAuthAction; pendingAuthAction = null; fn(); }
-    } else {
-      passwordError.style.display = 'block';
-      passwordInput.value = '';
-      passwordInput.focus();
-    }
-  }
-
-  document.getElementById('btnPasswordSubmit').addEventListener('click', trySubmitPassword);
-  passwordInput.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); trySubmitPassword(); } });
-  loginInput.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); passwordInput.focus(); } });
-  document.getElementById('btnPasswordCancel').addEventListener('click', function(){
-    pendingAuthAction = null;
-    passwordDialog.close();
-  });
-
-  document.getElementById('btnToggleLock').addEventListener('click', function(){
-    if(isUnlocked){
-      isUnlocked = false;
-      updateLockUI();
-      toast('Login Master encerrado');
-    } else {
-      withAuth(function(){})();
-    }
-  });
 
   // ---------------- Image helpers ----------------
   function resizeImageFile(file, maxDim, quality){
@@ -3093,12 +2996,6 @@ Dark Magician Girl;Spellcaster;DARK;2000;1700;6;Female"></textarea>
   }
 
   var importTemplateInputEl = document.getElementById('importTemplateInput');
-  importTemplateInputEl.addEventListener('click', function(e){
-    if(!isUnlocked){
-      e.preventDefault();
-      promptAuth(function(){ importTemplateInputEl.click(); });
-    }
-  });
   importTemplateInputEl.addEventListener('change', function(e){
     var file = e.target.files && e.target.files[0];
     if(!file) return;
@@ -3356,12 +3253,6 @@ Dark Magician Girl;Spellcaster;DARK;2000;1700;6;Female"></textarea>
   }));
 
   var importBackupInputEl = document.getElementById('importBackupInput');
-  importBackupInputEl.addEventListener('click', function(e){
-    if(!isUnlocked){
-      e.preventDefault();
-      promptAuth(function(){ importBackupInputEl.click(); });
-    }
-  });
   importBackupInputEl.addEventListener('change', function(e){
     var file = e.target.files && e.target.files[0];
     if(!file) return;
@@ -4043,7 +3934,7 @@ Dark Magician Girl;Spellcaster;DARK;2000;1700;6;Female"></textarea>
       '</ul>' +
 
       '<h2>8. Login Master</h2>' +
-      '<p>The same login now guards two layers: it blocks access to the <b>entire site</b> on every fresh load (a full-screen gate appears first, nothing is usable until you log in), and it also keeps protecting tool-level actions (Save, Backup, Folder, template) during the session — <b>not</b> card editing, which is always free once you are in.</p>' +
+      '<p>The login gate blocks access to the <b>entire site</b> on every fresh load — a full-screen gate appears first, and nothing is usable until you log in. There is no separate tool-level lock anymore: once you are past the gate, everything (Save, Backup, Folder, template, and card editing) is free for the rest of the session.</p>' +
       '<div class="note">Login: <b>Admin</b> · Password: <b>Admin</b></div>' +
       '<p>This is a usage guardrail, not real security: anyone with access to the .html file (or the browser\'s "view source") can see the login and password in the code. It keeps casual visitors out, not a technically capable person.</p>' +
 
@@ -4134,7 +4025,7 @@ Dark Magician Girl;Spellcaster;DARK;2000;1700;6;Female"></textarea>
     '</ul>' +
 
     '<h2>8. Login Master</h2>' +
-    '<p>O mesmo login agora protege duas camadas: ele bloqueia o acesso ao <b>site inteiro</b> a cada carregamento novo (uma tela cheia de acesso aparece primeiro, nada fica utilizável antes de entrar), e continua protegendo as ações da ferramenta (Salvar, Backup, Pasta, template) durante a sessão — <b>não</b> a edição de cartas, que é sempre livre depois que você entra.</p>' +
+    '<p>O login de acesso bloqueia o <b>site inteiro</b> a cada carregamento novo — uma tela cheia de acesso aparece primeiro, e nada fica utilizável antes de entrar. Não existe mais uma trava separada pras ações da ferramenta: depois que você passa pela tela de entrada, tudo (Salvar, Backup, Pasta, template e edição de cartas) fica livre pelo resto da sessão.</p>' +
     '<div class="note">Login: <b>Admin</b> · Senha: <b>Admin</b></div>' +
     '<p>Isso é uma trava de uso, não uma segurança real: qualquer pessoa com acesso ao arquivo .html (ou ao "ver código-fonte" do navegador) consegue ver o login e a senha no código. Serve para afastar visitantes casuais, não para proteger contra alguém técnico.</p>' +
 
@@ -4279,7 +4170,6 @@ Dark Magician Girl;Spellcaster;DARK;2000;1700;6;Female"></textarea>
   (async function init(){
     var versionBadge = document.getElementById('versionBadge');
     if(versionBadge) versionBadge.textContent = 'v' + APP_VERSION;
-    updateLockUI();
     await loadAll();
     applyBackground();
     applyCharFilePrefsToCheckboxes();
