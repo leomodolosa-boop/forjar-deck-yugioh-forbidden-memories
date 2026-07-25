@@ -489,7 +489,8 @@
   body.site-locked .site-gate{
     display:flex; position:fixed; inset:0; z-index:9999;
     align-items:center; justify-content:center; padding:24px;
-    background-size:cover; background-position:center; background-repeat:no-repeat;
+    background-color:var(--void);
+    background-size:cover, contain; background-position:center; background-repeat:no-repeat;
   }
   .site-gate-card{
     background:rgba(20,17,12,0.74);
@@ -1464,7 +1465,7 @@ Dark Magician Girl;Spellcaster;DARK;2000;1700;6;Female"></textarea>
   };
 
   // Versão do programa — atualizar este número a cada mudança publicada.
-  var APP_VERSION = '2.53';
+  var APP_VERSION = '2.54';
 
   var BASE_CARDS = JSON.parse(document.getElementById('cards-data').textContent);
   var DEFAULT_META = JSON.parse(document.getElementById('default-meta-data').textContent);
